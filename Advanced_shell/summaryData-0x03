@@ -1,0 +1,24 @@
+#!/bin/bash
+# Generate Pokémon CSV report
+
+INPUT_DIR="pokemon_data"
+OUTPUT_FILE="pokemon_report.csv"
+
+echo "Name,Height (m),Weight (kg)" > "$OUTPUT_FILE"
+
+for file in "$INPUT_DIR"/*.json; do
+    NAME=$(jq -r '.name' "$file" | sed 's/.*/\u&/')
+    HEIGHT=$(jq -r '.height' "$file")
+    WEIGHT=$(jq -r '.weight' "$file")
+
+    HEIGHT_M=$(awk "BEGIN {print $HEIGHT / 10}")
+    WEIGHT_KG=$(awk "BEGIN {print $WEIGHT / 10}")
+
+    echo "$NAME,$HEIGHT_M,$WEIGHT_KG" >> "$OUTPUT_FILE"
+done
+
+echo "" >> "$OUTPUT_FILE"
+echo "Average Height: $(awk -F, 'NR>1 {sum+=$2} END {print sum/(NR-1)}' "$OUTPUT_FILE") m" >> "$OUTPUT_FILE"
+echo "Average Weight: $(awk -F, 'NR>1 {sum+=$3} END {print sum/(NR-1)}' "$OUTPUT_FILE") kg" >> "$OUTPUT_FILE"
+
+echo "CSV Report generated at: $OUTPUT_FILE"
