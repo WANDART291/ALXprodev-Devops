@@ -1,49 +1,45 @@
 ```bash
 #!/bin/bash
+# batchProcessing-0x04
+# Fetch Pokémon data in parallel and wait for all background processes to finish.
 
-# Batch Processing Script - 0x04
-# Fetches Pokémon data in parallel and waits for all background processes to complete.
-
-POKEMONS=("pikachu" "bulbasaur" "charmander" "squirtle")
+POKEMONS=("pikachu" "bulbasaur" "charmander" "squirtle" "mew")
 OUTPUT_DIR="pokemon_data"
+LOG_FILE="failed_requests.log"
 
-# Create output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
+> "$LOG_FILE"  # Clear log file
 
-# Function to fetch data for a single Pokémon
-fetch_pokemon_data() {
+fetch_pokemon() {
     local pokemon=$1
     local output_file="$OUTPUT_DIR/${pokemon}.json"
 
     echo "🔍 Fetching data for $pokemon..."
-    response=$(curl -s -w "%{http_code}" -o "$output_file" "https://pokeapi.co/api/v2/pokemon/$pokemon")
-    http_code=${response: -3}
+    http_code=$(curl -s -w "%{http_code}" -o "$output_file" "https://pokeapi.co/api/v2/pokemon/$pokemon")
 
     if [ "$http_code" -eq 200 ]; then
-        echo "✅ Successfully fetched $pokemon data (saved to $output_file)"
+        echo "✅ Successfully fetched data for $pokemon"
     else
-        echo "❌ Failed to fetch $pokemon (HTTP $http_code)"
-        echo "$pokemon" >> failed_requests.log
+        echo "❌ Failed to fetch $pokemon (HTTP $http_code)" | tee -a "$LOG_FILE"
         rm -f "$output_file"
     fi
 }
 
 # Run all fetches in parallel
 for pokemon in "${POKEMONS[@]}"; do
-    fetch_pokemon_data "$pokemon" &
+    fetch_pokemon "$pokemon" &
 done
 
-# Wait for all background processes to finish
+# Wait for all background jobs
 wait
 
 echo "-----------------------------------"
-echo "All Pokémon data fetching complete."
+echo "All background fetching complete."
 
-# Check if output directory is not empty
+# Check if output directory exists and contains files
 if [ -d "$OUTPUT_DIR" ] && [ "$(ls -A "$OUTPUT_DIR")" ]; then
     echo "✅ Output directory '$OUTPUT_DIR' exists and contains files."
 else
-    echo "⚠️ No data found. Output directory is empty or missing."
+    echo "⚠️ Output directory is empty or missing."
 fi
 ```
-
