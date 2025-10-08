@@ -1,45 +1,49 @@
-```bash
 #!/bin/bash
 # batchProcessing-0x04
-# Fetch Pokémon data in parallel and wait for all background processes to finish.
+# Fetch Pokémon data in parallel and ensure all background processes complete.
 
-POKEMONS=("pikachu" "bulbasaur" "charmander" "squirtle" "mew")
+POKEMONS=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 OUTPUT_DIR="pokemon_data"
-LOG_FILE="failed_requests.log"
+FAILED_LOG="failed_requests.log"
 
 mkdir -p "$OUTPUT_DIR"
-> "$LOG_FILE"  # Clear log file
+> "$FAILED_LOG"  # clear previous log
 
+# Function to fetch a single Pokémon
 fetch_pokemon() {
-    local pokemon=$1
-    local output_file="$OUTPUT_DIR/${pokemon}.json"
+    local name="$1"
+    local file="$OUTPUT_DIR/${name}.json"
 
-    echo "🔍 Fetching data for $pokemon..."
-    http_code=$(curl -s -w "%{http_code}" -o "$output_file" "https://pokeapi.co/api/v2/pokemon/$pokemon")
+    echo "🔍 Fetching $name..."
+    http_code=$(curl -s -w "%{http_code}" -o "$file" "https://pokeapi.co/api/v2/pokemon/$name")
 
-    if [ "$http_code" -eq 200 ]; then
-        echo "✅ Successfully fetched data for $pokemon"
+    if [ "$http_code" -eq 200 ] && [ -s "$file" ]; then
+        echo "✅ $name saved to $file"
     else
-        echo "❌ Failed to fetch $pokemon (HTTP $http_code)" | tee -a "$LOG_FILE"
-        rm -f "$output_file"
+        echo "$name failed (HTTP $http_code)" >> "$FAILED_LOG"
+        rm -f "$file"
+        echo "❌ $name fetch failed and file removed"
     fi
 }
 
-# Run all fetches in parallel
-for pokemon in "${POKEMONS[@]}"; do
-    fetch_pokemon "$pokemon" &
+# Run all fetches in parallel and store PIDs
+PIDS=()
+for pkm in "${POKEMONS[@]}"; do
+    fetch_pokemon "$pkm" &
+    PIDS+=($!)
 done
 
-# Wait for all background jobs
-wait
+# Wait for all background processes to complete
+for pid in "${PIDS[@]}"; do
+    wait "$pid"
+done
 
 echo "-----------------------------------"
-echo "All background fetching complete."
+echo "All parallel fetches completed."
 
-# Check if output directory exists and contains files
+# Verify output directory contains files
 if [ -d "$OUTPUT_DIR" ] && [ "$(ls -A "$OUTPUT_DIR")" ]; then
     echo "✅ Output directory '$OUTPUT_DIR' exists and contains files."
 else
     echo "⚠️ Output directory is empty or missing."
 fi
-```
