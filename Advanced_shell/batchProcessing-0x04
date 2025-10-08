@@ -1,0 +1,17 @@
+#!/bin/bash
+# Fetch data in parallel
+
+POKEMONS=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+FOLDER="pokemon_parallel"
+mkdir -p "$FOLDER"
+
+for POKEMON in "${POKEMONS[@]}"; do
+    {
+        echo "Fetching $POKEMON..."
+        curl -s "https://pokeapi.co/api/v2/pokemon/$POKEMON" -o "$FOLDER/$POKEMON.json"
+        echo "$POKEMON done ✅"
+    } &
+done
+
+wait
+echo "All downloads complete 🎉"
