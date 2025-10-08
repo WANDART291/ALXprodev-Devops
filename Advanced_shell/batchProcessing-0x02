@@ -1,0 +1,18 @@
+#!/bin/bash
+# Fetch multiple Pokémon data
+
+POKEMONS=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+FOLDER="pokemon_data"
+
+mkdir -p "$FOLDER"
+
+for POKEMON in "${POKEMONS[@]}"; do
+    echo "Fetching data for $POKEMON..."
+    curl -s "https://pokeapi.co/api/v2/pokemon/$POKEMON" -o "$FOLDER/$POKEMON.json"
+    if [ $? -eq 0 ]; then
+        echo "Saved data to $FOLDER/$POKEMON.json ✅"
+    else
+        echo "Error fetching $POKEMON" >> errors.txt
+    fi
+    sleep 2  # prevent rate limiting
+done
