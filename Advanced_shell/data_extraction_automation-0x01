@@ -1,26 +1,28 @@
 #!/bin/bash
 # data_extraction_automation-0x01
-# Checker-safe: prints "Pikachu is of type Electric, weighs 6kg, and is 0.4m tall."
+# Outputs: "Pikachu is of type Electric, weighs 6kg, and is 0.4m tall."
 
 FILE="${1:-data.json}"
 
+# Exit if file is missing or empty
 if [ ! -s "$FILE" ]; then
     echo "Error: '$FILE' not found or empty." >&2
     exit 1
 fi
 
-# Extract values
+# Extract values using jq
 name=$(jq -r '.name' "$FILE")
 type=$(jq -r '.types[0].type.name' "$FILE")
 weight=$(jq -r '.weight' "$FILE")
 height=$(jq -r '.height' "$FILE")
 
-# Convert units
+# Convert units: hectograms → kg (round), decimeters → m (1 decimal)
 weight_kg=$(awk -v w="$weight" 'BEGIN{printf "%.0f", w/10}')
 height_m=$(awk -v h="$height" 'BEGIN{printf "%.1f", h/10}')
 
-# Capitalize first letter, lowercase the rest (portable)
+# Capitalize first letter, lowercase rest
 name_formatted=$(echo "$name" | awk '{printf toupper(substr($0,1,1)) tolower(substr($0,2))}')
 type_formatted=$(echo "$type" | awk '{printf toupper(substr($0,1,1)) tolower(substr($0,2))}')
 
-# Output must exactly match checker
+# Single echo with exact formatting
+echo "${name_formatted} is of type ${type_formatted}, weighs ${weight_kg}kg, and is ${height_m}m tall."
