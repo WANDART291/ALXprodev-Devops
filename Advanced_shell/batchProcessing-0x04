@@ -1,17 +1,49 @@
+```bash
 #!/bin/bash
-# Fetch data in parallel
 
-POKEMONS=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
-FOLDER="pokemon_parallel"
-mkdir -p "$FOLDER"
+# Batch Processing Script - 0x04
+# Fetches Pokémon data in parallel and waits for all background processes to complete.
 
-for POKEMON in "${POKEMONS[@]}"; do
-    {
-        echo "Fetching $POKEMON..."
-        curl -s "https://pokeapi.co/api/v2/pokemon/$POKEMON" -o "$FOLDER/$POKEMON.json"
-        echo "$POKEMON done ✅"
-    } &
+POKEMONS=("pikachu" "bulbasaur" "charmander" "squirtle")
+OUTPUT_DIR="pokemon_data"
+
+# Create output directory if it doesn't exist
+mkdir -p "$OUTPUT_DIR"
+
+# Function to fetch data for a single Pokémon
+fetch_pokemon_data() {
+    local pokemon=$1
+    local output_file="$OUTPUT_DIR/${pokemon}.json"
+
+    echo "🔍 Fetching data for $pokemon..."
+    response=$(curl -s -w "%{http_code}" -o "$output_file" "https://pokeapi.co/api/v2/pokemon/$pokemon")
+    http_code=${response: -3}
+
+    if [ "$http_code" -eq 200 ]; then
+        echo "✅ Successfully fetched $pokemon data (saved to $output_file)"
+    else
+        echo "❌ Failed to fetch $pokemon (HTTP $http_code)"
+        echo "$pokemon" >> failed_requests.log
+        rm -f "$output_file"
+    fi
+}
+
+# Run all fetches in parallel
+for pokemon in "${POKEMONS[@]}"; do
+    fetch_pokemon_data "$pokemon" &
 done
 
+# Wait for all background processes to finish
 wait
-echo "All downloads complete 🎉"
+
+echo "-----------------------------------"
+echo "All Pokémon data fetching complete."
+
+# Check if output directory is not empty
+if [ -d "$OUTPUT_DIR" ] && [ "$(ls -A "$OUTPUT_DIR")" ]; then
+    echo "✅ Output directory '$OUTPUT_DIR' exists and contains files."
+else
+    echo "⚠️ No data found. Output directory is empty or missing."
+fi
+```
+
