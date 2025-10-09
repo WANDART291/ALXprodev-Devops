@@ -1,45 +1,34 @@
-```bash
 #!/bin/bash
-# batchProcessing-0x04
-# Fetch Pokémon data in parallel and wait for all background processes to finish.
 
-POKEMONS=("pikachu" "bulbasaur" "charmander" "squirtle" "mew")
+trap "echo ' Script interrupted. Cleaning up background jobs...'; kill $(jobs -p) 2>/dev/null; exit" INT TERM
+
+POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 OUTPUT_DIR="pokemon_data"
-LOG_FILE="failed_requests.log"
 
 mkdir -p "$OUTPUT_DIR"
-> "$LOG_FILE"  # Clear log file
 
-fetch_pokemon() {
-    local pokemon=$1
-    local output_file="$OUTPUT_DIR/${pokemon}.json"
-
-    echo "🔍 Fetching data for $pokemon..."
-    http_code=$(curl -s -w "%{http_code}" -o "$output_file" "https://pokeapi.co/api/v2/pokemon/$pokemon")
-
-    if [ "$http_code" -eq 200 ]; then
-        echo "✅ Successfully fetched data for $pokemon"
+fetch_one() {
+    pokemon=$1
+    echo "[PID: $$] Starting download for ${pokemon}..."
+    
+    API_URL="https://pokeapi.co/api/v2/pokemon/${pokemon}"
+    FILENAME="${OUTPUT_DIR}/${pokemon}.json"
+    
+    curl -s -f -o "$FILENAME" "$API_URL"
+    
+    if [ $? -eq 0 ]; then
+        echo "[PID: $$] ✅ Finished download for ${pokemon}."
     else
-        echo "❌ Failed to fetch $pokemon (HTTP $http_code)" | tee -a "$LOG_FILE"
-        rm -f "$output_file"
+        echo "[PID: $$] ❌ FAILED download for ${pokemon}."
+        rm -f "$FILENAME"
     fi
 }
 
-# Run all fetches in parallel
-for pokemon in "${POKEMONS[@]}"; do
-    fetch_pokemon "$pokemon" &
+for pokemon in "${POKEMON_LIST[@]}"
+do
+    fetch_one "$pokemon" &
 done
 
-# Wait for all background jobs
+echo "--> All download jobs launched. Waiting for completion..."
 wait
-
-echo "-----------------------------------"
-echo "All background fetching complete."
-
-# Check if output directory exists and contains files
-if [ -d "$OUTPUT_DIR" ] && [ "$(ls -A "$OUTPUT_DIR")" ]; then
-    echo "✅ Output directory '$OUTPUT_DIR' exists and contains files."
-else
-    echo "⚠️ Output directory is empty or missing."
-fi
-```
+echo "--> All parallel downloads are complete."
